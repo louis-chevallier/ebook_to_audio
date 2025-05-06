@@ -1,9 +1,13 @@
+from html.parser import HTMLParser
 from kokoro import KPipeline
 from IPython.display import display, Audio
 import soundfile as sf
 import torch
 from utillc import *
 import numpy as np
+import ebooklib
+from ebooklib import epub
+from pydub import AudioSegment
 
 pipeline = KPipeline(lang_code='f',device="cuda")
 
@@ -39,8 +43,53 @@ text = '''
 voice = "af_heart"
 voice = "ff_siwis"
 
-generator = pipeline(fr_text, voice=voice, speed=0.8, split_pattern=r'\n+')
-a = np.hstack([ audio for i, (gs, ps, audio) in enumerate(generator)])
+book_name, file_in = "le grand troupeau", "/mnt/NUC/download/Le Grand troupeau -- Giono Jean [Giono Jean] -- 1972 -- Gallimard -- 5716ff776f50d54d8e3fc54a820dc84a -- Anna’s Archive.epub"
+book = epub.read_epub(file_in)
+
+words_per_block = 1000
+
+class HTMLFilter(HTMLParser):
+    """
+    Source: https://stackoverflow.com/a/55825140/1209004
+    """
+    i = 0
+    words = []
+    def handle_data(self, data):
+        save_path = 'out/output.wav'
+        self.words += data.split()
+        #EKOX(len(self.words))
+        while len(self.words) > words_per_block :
+            EKOX(self.i)
+            #EKOX(data)
+            #EKOX(" ".join(self.words[0:words_per_block]))
+            self.gen()
+            self.words = self.words[words_per_block: ]
+            content = ""
+    def end(self) :
+        EKOX(len(self.words))
+
+    def gen(self) :
+        EKOX(len(self.words))
+        txt = " ".join(self.words)
+        generator = pipeline(txt, voice=voice, speed=0.8, split_pattern=r'\n+')        
+        a = np.hstack([ audio for i, (gs, ps, audio) in enumerate(generator)])
+        sf.write("out.wav", a, 24000)
+        AudioSegment.from_wav("out.wav").export("%s_%03d.mp3" % (book_name, self.i), format="mp3")
+        self.i += 1
+
+f = HTMLFilter()
+
+for item in book.get_items():
+    if item.get_type() == ebooklib.ITEM_DOCUMENT:
+        #EKO()
+        bodyContent = item.get_body_content().decode()
+        f.feed(bodyContent)
+EKO()
+f.end()
+EKO()
+
+
+
 EKOX(a.shape)
-sf.write("out.wav", a, 24000)
+
 
