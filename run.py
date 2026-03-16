@@ -8,8 +8,20 @@ import numpy as np
 import ebooklib
 from ebooklib import epub
 from pydub import AudioSegment
+import os
+print_everything()
 
-pipeline = KPipeline(lang_code='f',device="cuda")
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--fin", default =  "/mnt/NUC/download/Le Grand troupeau -- Giono Jean [Giono Jean] -- 1972 -- Gallimard -- 5716ff776f50d54d8e3fc54a820dc84a -- Anna’s Archive.epub")
+parser.add_argument("--book_name", default = "Le Grand troupeau")
+args = parser.parse_args()
+
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+pipeline = KPipeline(lang_code='f',device=device)
 
 fr_text = """J’y ai trouvé je crois l’occasion d’une réconciliation avec mes amours de jeunesse, Holmes, Lupin, Poirot, Maigret.
 Cette formule est d’ailleurs imprécise.
@@ -43,53 +55,72 @@ text = '''
 voice = "af_heart"
 voice = "ff_siwis"
 
-book_name, file_in = "le grand troupeau", "/mnt/NUC/download/Le Grand troupeau -- Giono Jean [Giono Jean] -- 1972 -- Gallimard -- 5716ff776f50d54d8e3fc54a820dc84a -- Anna’s Archive.epub"
-book = epub.read_epub(file_in)
+#book_name, file_in = "le grand troupeau",
 
-words_per_block = 1000
 
-class HTMLFilter(HTMLParser):
-    """
-    Source: https://stackoverflow.com/a/55825140/1209004
-    """
-    i = 0
-    words = []
-    def handle_data(self, data):
-        save_path = 'out/output.wav'
-        self.words += data.split()
-        #EKOX(len(self.words))
-        while len(self.words) > words_per_block :
-            EKOX(self.i)
-            #EKOX(data)
-            #EKOX(" ".join(self.words[0:words_per_block]))
-            self.gen()
-            self.words = self.words[words_per_block: ]
-            content = ""
-    def end(self) :
-        EKOX(len(self.words))
+file_in = args.fin 
+book_name = args.book_name
 
-    def gen(self) :
-        EKOX(len(self.words))
-        txt = " ".join(self.words)
+
+(root, ext), base = os.path.splitext(file_in) , os.path.basename(file_in)
+EKON(ext, base)
+
+if ext == ".txt" :
+    with open(file_in, 'r') as file:
+        txt = file.read().replace('\n', '')    
         generator = pipeline(txt, voice=voice, speed=0.8, split_pattern=r'\n+')        
         a = np.hstack([ audio for i, (gs, ps, audio) in enumerate(generator)])
         sf.write("out.wav", a, 24000)
         AudioSegment.from_wav("out.wav").export("%s_%03d.mp3" % (book_name, self.i), format="mp3")
-        self.i += 1
+    
+    
+if os.path.splitext(file_in) == ".epub" :
 
-f = HTMLFilter()
+    book = epub.read_epub(file_in)
+    words_per_block = 1000
 
-for item in book.get_items():
-    if item.get_type() == ebooklib.ITEM_DOCUMENT:
-        #EKO()
-        bodyContent = item.get_body_content().decode()
-        f.feed(bodyContent)
-EKO()
-f.end()
-EKO()
+    class HTMLFilter(HTMLParser):
+        """
+        Source: https://stackoverflow.com/a/55825140/1209004
+        """
+        i = 0
+        words = []
+        def handle_data(self, data):
+            save_path = 'out/output.wav'
+            self.words += data.split()
+            #EKOX(len(self.words))
+            while len(self.words) > words_per_block :
+                EKOX(self.i)
+                #EKOX(data)
+                #EKOX(" ".join(self.words[0:words_per_block]))
+                self.gen()
+                self.words = self.words[words_per_block: ]
+                content = ""
+        def end(self) :
+            EKOX(len(self.words))
+
+        def gen(self) :
+            EKOX(len(self.words))
+            txt = " ".join(self.words)
+            generator = pipeline(txt, voice=voice, speed=0.8, split_pattern=r'\n+')        
+            a = np.hstack([ audio for i, (gs, ps, audio) in enumerate(generator)])
+            sf.write("out.wav", a, 24000)
+            AudioSegment.from_wav("out.wav").export("%s_%03d.mp3" % (book_name, self.i), format="mp3")
+            self.i += 1
+
+    f = HTMLFilter()
+
+    for item in book.get_items():
+        if item.get_type() == ebooklib.ITEM_DOCUMENT:
+            #EKO()
+            bodyContent = item.get_body_content().decode()
+            f.feed(bodyContent)
+    EKO()
+    f.end()
+    EKO()
 
 
 
-EKOX(a.shape)
+    EKOX(a.shape)
 
 

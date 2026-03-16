@@ -7,7 +7,7 @@ WAV = $(wildcard *.wav)
 WAVX = $(WAV:%=%|)
 
 start :
-	python run.py
+	python run.py --fin huc.txt --book_name huc
 
 startx : start1
 	make conv
